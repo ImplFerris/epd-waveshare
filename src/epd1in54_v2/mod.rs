@@ -52,6 +52,28 @@ where
         self.interface.cmd(spi, Command::SwReset)?;
         self.wait_until_idle(spi, delay)?;
 
+        // self.set_ram_area(spi, delay, 0, 0, WIDTH - 1, HEIGHT - 1)?;
+
+        self.interface.cmd_with_data(
+            spi,
+            Command::TemperatureSensorSelection,
+            &[0x80], // 0x80: internal temperature sensor
+        )?;
+
+        self.interface
+            .cmd_with_data(spi, Command::TemperatureSensorControl, &[0xB1, 0x20])?;
+
+        // self.set_ram_counter(spi, delay, 0, 0)?;
+
+        //Initialize the lookup table with a refresh waveform
+        self.set_lut(spi, delay, None)?;
+
+        self.wait_until_idle(spi, delay)?;
+        Ok(())
+    }
+
+    /// Change DriverOutputControl and DataEntryModeSetting
+    pub fn set_mode(&mut self, spi: &mut SPI) -> Result<(), SPI::Error> {
         // 3 Databytes:
         // A[7:0]
         // 0.. A[8]
@@ -64,26 +86,7 @@ where
         )?;
 
         self.interface
-            .cmd_with_data(spi, Command::DataEntryModeSetting, &[0x3])?;
-
-        self.set_ram_area(spi, delay, 0, 0, WIDTH - 1, HEIGHT - 1)?;
-
-        self.interface.cmd_with_data(
-            spi,
-            Command::TemperatureSensorSelection,
-            &[0x80], // 0x80: internal temperature sensor
-        )?;
-
-        self.interface
-            .cmd_with_data(spi, Command::TemperatureSensorControl, &[0xB1, 0x20])?;
-
-        self.set_ram_counter(spi, delay, 0, 0)?;
-
-        //Initialize the lookup table with a refresh waveform
-        self.set_lut(spi, delay, None)?;
-
-        self.wait_until_idle(spi, delay)?;
-        Ok(())
+            .cmd_with_data(spi, Command::DataEntryModeSetting, &[0x3])
     }
 }
 
@@ -162,6 +165,8 @@ where
         height: u32,
     ) -> Result<(), SPI::Error> {
         self.wait_until_idle(spi, delay)?;
+        // self.set_ram_area(spi, delay, x, y, x + (width - 1), y + (height - 1))?;
+        // self.set_ram_counter(spi, delay, x, (HEIGHT - 1) - y)?;
         self.set_ram_area(spi, delay, x, y, x + width, y + height)?;
         self.set_ram_counter(spi, delay, x, y)?;
 
@@ -174,7 +179,7 @@ where
         self.wait_until_idle(spi, delay)?;
         if self.refresh == RefreshLut::Full {
             self.interface
-                .cmd_with_data(spi, Command::DisplayUpdateControl2, &[0xC7])?;
+                .cmd_with_data(spi, Command::DisplayUpdateControl2, &[0xF7])?;
         } else if self.refresh == RefreshLut::Quick {
             self.interface
                 .cmd_with_data(spi, Command::DisplayUpdateControl2, &[0xCF])?;
@@ -211,6 +216,9 @@ where
         self.interface.cmd(spi, Command::WriteRam2)?;
         self.interface
             .data_x_times(spi, color, WIDTH / 8 * HEIGHT)?;
+
+        self.set_mode(spi).unwrap();
+
         Ok(())
     }
 
@@ -247,10 +255,12 @@ where
                 .cmd_with_data(spi, Command::BorderWaveformControl, &[0x80])?;
             self.interface
                 .cmd_with_data(spi, Command::DisplayUpdateControl2, &[0xc0])?;
-            self.interface.cmd(spi, Command::MasterActivation)?;
+            // self.interface.cmd(spi, Command::MasterActivation)?; // -> gives blurry issue
+            self.wait_until_idle(spi, delay)?;
+
             // MASTER Activation should not be interupted to avoid currption of panel images
             // therefore a terminate command is send
-            self.interface.cmd(spi, Command::Nop)?;
+            // self.interface.cmd(spi, Command::Nop)?;
         }
         Ok(())
     }
@@ -278,7 +288,8 @@ where
         self.set_ram_area(spi, delay, 0, 0, WIDTH - 1, HEIGHT - 1)?;
 
         // start from the beginning
-        self.set_ram_counter(spi, delay, 0, 0)
+        // self.set_ram_counter(spi, delay, 0, HEIGHT - 1)
+        self.set_ram_counter(spi, delay, 0, HEIGHT - 1)
     }
 
     pub(crate) fn set_ram_area(
