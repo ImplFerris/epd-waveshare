@@ -189,6 +189,8 @@ where
         // MASTER Activation should not be interupted to avoid currption of panel images
         // therefore a terminate command is send
         self.interface.cmd(spi, Command::Nop)?;
+        self.wait_until_idle(spi, delay)?;
+
         Ok(())
     }
 
@@ -255,12 +257,13 @@ where
                 .cmd_with_data(spi, Command::BorderWaveformControl, &[0x80])?;
             self.interface
                 .cmd_with_data(spi, Command::DisplayUpdateControl2, &[0xc0])?;
-            // self.interface.cmd(spi, Command::MasterActivation)?; // -> gives blurry issue
-            self.wait_until_idle(spi, delay)?;
+            self.interface.cmd(spi, Command::MasterActivation)?;
 
             // MASTER Activation should not be interupted to avoid currption of panel images
             // therefore a terminate command is send
-            // self.interface.cmd(spi, Command::Nop)?;
+            self.interface.cmd(spi, Command::Nop)?;
+
+            self.wait_until_idle(spi, delay)?;
         }
         Ok(())
     }
