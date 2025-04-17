@@ -52,8 +52,6 @@ where
         self.interface.cmd(spi, Command::SwReset)?;
         self.wait_until_idle(spi, delay)?;
 
-        // self.set_ram_area(spi, delay, 0, 0, WIDTH - 1, HEIGHT - 1)?;
-
         self.interface.cmd_with_data(
             spi,
             Command::TemperatureSensorSelection,
@@ -62,8 +60,6 @@ where
 
         self.interface
             .cmd_with_data(spi, Command::TemperatureSensorControl, &[0xB1, 0x20])?;
-
-        // self.set_ram_counter(spi, delay, 0, 0)?;
 
         //Initialize the lookup table with a refresh waveform
         self.set_lut(spi, delay, None)?;
@@ -165,8 +161,6 @@ where
         height: u32,
     ) -> Result<(), SPI::Error> {
         self.wait_until_idle(spi, delay)?;
-        // self.set_ram_area(spi, delay, x, y, x + (width - 1), y + (height - 1))?;
-        // self.set_ram_counter(spi, delay, x, (HEIGHT - 1) - y)?;
         self.set_ram_area(spi, delay, x, y, x + width, y + height)?;
         self.set_ram_counter(spi, delay, x, y)?;
 
@@ -291,7 +285,6 @@ where
         self.set_ram_area(spi, delay, 0, 0, WIDTH - 1, HEIGHT - 1)?;
 
         // start from the beginning
-        // self.set_ram_counter(spi, delay, 0, HEIGHT - 1)
         self.set_ram_counter(spi, delay, 0, HEIGHT - 1)
     }
 
